@@ -1,0 +1,7 @@
+# Runtime dependencies for the unified local app (app.py).
+flask>=3.0.0,<4
+flask-cors>=4.0.0,<7
+opencv-python-headless>=4.10.0,<5
+numpy>=2.1.0,<3; python_version >= "3.12"
+numpy>=1.26.0,<2; python_version < "3.12"
+imageio-ffmpeg>=0.5.1,<1

@@ -1,0 +1,173 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/health",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/",
+      "destination": "/frontend/index.html"
+    },
+    {
+      "source": "/index.html",
+      "destination": "/frontend/index.html"
+    },
+    {
+      "source": "/login.html",
+      "destination": "/frontend/login.html"
+    },
+    {
+      "source": "/register.html",
+      "destination": "/frontend/register.html"
+    },
+    {
+      "source": "/dashboard.html",
+      "destination": "/frontend/pages/dashboard.html"
+    },
+    {
+      "source": "/surveillance.html",
+      "destination": "/frontend/pages/surveillance.html"
+    },
+    {
+      "source": "/cameras.html",
+      "destination": "/frontend/pages/cameras.html"
+    },
+    {
+      "source": "/live.html",
+      "destination": "/frontend/pages/live.html"
+    },
+    {
+      "source": "/analytics.html",
+      "destination": "/frontend/pages/analytics.html"
+    },
+    {
+      "source": "/traffic-ai.html",
+      "destination": "/frontend/pages/traffic-ai.html"
+    },
+    {
+      "source": "/vehicle-search",
+      "destination": "/frontend/pages/vehicle-search.html"
+    },
+    {
+      "source": "/vehicle-search.html",
+      "destination": "/frontend/pages/vehicle-search.html"
+    },
+    {
+      "source": "/history.html",
+      "destination": "/frontend/pages/history.html"
+    },
+    {
+      "source": "/reports.html",
+      "destination": "/frontend/pages/reports.html"
+    },
+    {
+      "source": "/settings.html",
+      "destination": "/frontend/pages/settings.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/frontend/login.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/frontend/register.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/frontend/pages/dashboard.html"
+    },
+    {
+      "source": "/surveillance",
+      "destination": "/frontend/pages/surveillance.html"
+    },
+    {
+      "source": "/cameras",
+      "destination": "/frontend/pages/cameras.html"
+    },
+    {
+      "source": "/live",
+      "destination": "/frontend/pages/live.html"
+    },
+    {
+      "source": "/analytics",
+      "destination": "/frontend/pages/analytics.html"
+    },
+    {
+      "source": "/traffic-ai",
+      "destination": "/frontend/pages/traffic-ai.html"
+    },
+    {
+      "source": "/history",
+      "destination": "/frontend/pages/history.html"
+    },
+    {
+      "source": "/reports",
+      "destination": "/frontend/pages/reports.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/frontend/pages/settings.html"
+    },
+    {
+      "source": "/command-center",
+      "destination": "/frontend/pages/command-center.html"
+    },
+    {
+      "source": "/command-center.html",
+      "destination": "/frontend/pages/command-center.html"
+    },
+    {
+      "source": "/css/(.*)",
+      "destination": "/frontend/css/$1"
+    },
+    {
+      "source": "/js/(.*)",
+      "destination": "/frontend/js/$1"
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": "/frontend/assets/$1"
+    },
+    {
+      "source": "/pages/(.*)",
+      "destination": "/frontend/pages/$1"
+    },
+    {
+      "source": "/(.*\\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf))",
+      "destination": "/frontend/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
+}

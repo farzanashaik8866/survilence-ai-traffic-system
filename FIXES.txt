@@ -1,0 +1,45 @@
+SURVILLENCE TRAFFIC — FIXED BUILD
+
+1. Critical vehicle-class bug fixed
+   - The bundled UVH-26 ONNX model has 14 classes in this exact order:
+     Hatchback, Sedan, SUV, MUV, Bus, Truck, Three-wheeler, Two-wheeler,
+     LCV, Mini-bus, tempo-traveller, bicycle, Van, Others.
+   - The previous portable class array was alphabetically reordered. That made
+     ONNX class id 7 (Two-wheeler) decode as Sedan/car. The portable detector now
+     uses the exact model order.
+   - Bicycle and tempo-traveller remain ignored as documented; motorbikes are
+     mapped to motorcycle.
+
+2. Wrong-way false positives reduced
+   - AUTO mode no longer assumes UP or DOWN.
+   - A lane needs at least 3 confirmed vehicles and 75% directional agreement
+     before its dominant flow is learned.
+   - A candidate wrong-way vehicle also needs strong individual direction evidence.
+   - Mixed/uncertain flow remains UNKNOWN rather than becoming an alert.
+   - Manual UP/DOWN modes are still supported for cameras with a known direction.
+
+3. Speed violation false positives reduced
+   - Uncalibrated pixel-to-meter estimates are display-only.
+   - Speed-violation incidents require real-world reference-gate calibration.
+
+4. Live camera safety
+   - Removed the hard-coded live rule that treated every UP-moving vehicle as wrong-way.
+   - Live wrong-way alerts require an explicit camera.expected_direction value.
+   - Live speed alerts require explicit speed_limit_kmh and meters_per_pixel calibration.
+
+5. Windows portability
+   - Normal runtime uses OpenCV DNN + bundled ONNX instead of requiring PyTorch/Ultralytics.
+   - START.bat supports Python 3.10–3.13 and prefers binary wheels.
+   - imageio-ffmpeg is bundled through pip for browser-compatible video conversion.
+
+Start the project with START.bat.
+
+
+v4 — speed/class regression release
+- Fixed speed violations being permanently disabled when no physical gate distance was supplied.
+- Added automatic estimated-speed violation detection with sustained threshold confirmation.
+- Preserved gate-calibrated speed as the preferred measurement when configured.
+- Fixed missed gate crossings by scanning the complete recent track history.
+- Extended per-track history for longer gate spacing.
+- Live camera streams now have working estimated speed alerts by default.
+- Added verify_install.py / VERIFY.bat.

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Search — SURVILLENCE TRAFFIC</title>
+  <link rel="stylesheet" href="/css/design-system.css"><link rel="stylesheet" href="/css/components.css"><link rel="stylesheet" href="/css/pages.css"><link rel="stylesheet" href="/css/visual-enhancements.css"><link rel="stylesheet" href="/css/visual-enhancements-v2.css">
+</head>
+<body class="app-shell"><div class="app-content"><main class="page-main">
+  <div class="page-header-row" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+    <div><h2>Vehicle Search</h2><p class="text-sm text-muted" style="margin-top:4px">Search tracked vehicles across your completed analyses.</p></div>
+    <span class="badge badge-accent" id="search-count">0 matches</span>
+  </div>
+  <div class="vehicle-search-grid">
+    <div class="chart-card">
+      <div class="chart-card-header"><div class="chart-card-title">Search Filters</div></div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="form-group"><label class="form-label">Search</label><input id="q" class="form-input" placeholder="Track ID, filename, vehicle…"></div>
+        <div class="form-group"><label class="form-label">Vehicle Type</label><select id="type" class="form-input"><option value="">All Types</option><option value="car">Car</option><option value="motorcycle">Motorcycle</option><option value="auto">Auto-rickshaw</option><option value="bus">Bus</option><option value="truck">Truck</option></select></div>
+        <div class="form-group"><label class="form-label">Direction</label><select id="direction" class="form-input"><option value="">All</option><option value="UP">UP</option><option value="DOWN">DOWN</option><option value="UNKNOWN">UNKNOWN</option></select></div>
+        <div class="form-group"><label class="form-label">Lane</label><select id="lane" class="form-input"><option value="">All Lanes</option><option value="1">Lane 1</option><option value="2">Lane 2</option><option value="3">Lane 3</option><option value="4">Lane 4</option><option value="5">Lane 5</option></select></div>
+        <div class="form-group"><label class="form-label">Signal</label><select id="violation" class="form-input"><option value="">All</option><option value="wrong_way">Wrong Way</option><option value="speed">Speed Violation</option><option value="incident">Any Incident</option></select></div>
+        <div style="display:flex;gap:8px"><button id="search-btn" class="btn btn-primary" style="flex:1">Search Vehicles</button><button id="clear-btn" class="btn btn-secondary">Clear</button></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-header"><div class="chart-card-title">Tracked Vehicles</div></div>
+      <div id="results" class="search-results-list"><div class="text-sm text-muted">Run a search to see tracked vehicles.</div></div>
+    </div>
+  </div>
+</main></div>
+<script src="/js/auth.js"></script><script src="/js/api-client.js"></script><script src="/js/shell.js"></script>
+<script>
+if(!Auth.requireAuth()) throw new Error('Not authenticated');
+document.addEventListener('DOMContentLoaded',()=>{ renderShell('Vehicle Search'); const p=new URLSearchParams(location.search); if(p.get('q')) document.getElementById('q').value=p.get('q'); runSearch(); });
+document.getElementById('search-btn').onclick=runSearch;
+document.getElementById('clear-btn').onclick=()=>{ ['q','type','direction','lane','violation'].forEach(id=>document.getElementById(id).value=''); runSearch(); };
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();});
+async function runSearch(){
+ const qEl=document.getElementById('q'), typeEl=document.getElementById('type'), directionEl=document.getElementById('direction'), laneEl=document.getElementById('lane'), violationEl=document.getElementById('violation');
+ const host=document.getElementById('results'); host.innerHTML='<div class="text-sm text-muted">Searching tracked reports…</div>';
+ try{ const rows=await ApiClient.searchVehicles({q:qEl.value,type:typeEl.value,direction:directionEl.value,lane:laneEl.value,violation:violationEl.value}); document.getElementById('search-count').textContent=`${rows.length} match${rows.length===1?'':'es'}`; host.innerHTML=rows.length?rows.map(v=>`<div class="vehicle-result"><div><div style="font-weight:700;font-size:16px">#${v.track_id}</div><div class="text-xs text-muted">${v.type||v.class||'Vehicle'}</div></div><div><div>${v.filename||'Analysis'} · ${v.direction||'UNKNOWN'} · Lane ${v.lane||'—'}</div><div class="text-xs text-muted" style="margin-top:3px">${v.speed_kmh?v.speed_kmh.toFixed(1)+' km/h':'Speed N/A'} · ${v.frames_tracked||0} tracked frames</div><div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">${v.wrong_way?'<span class="badge badge-error">WRONG WAY</span>':''}${v.speed_violation?'<span class="badge badge-warning">SPEED</span>':''}${(v.incidents||[]).length?'<span class="badge badge-muted">INCIDENT</span>':''}</div></div><a class="btn btn-ghost btn-sm" href="/traffic-ai?session=${encodeURIComponent(v.sessionId)}">Open</a></div>`).join(''):'<div class="text-sm text-muted">No tracked vehicles matched those filters.</div>'; }catch(e){host.innerHTML=`<div class="text-sm text-muted">Search failed: ${e.message}</div>`;}
+}
+</script><script src="/js/visual-enhancements.js"></script>
+</body></html>

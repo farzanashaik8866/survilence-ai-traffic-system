@@ -1,0 +1,67 @@
+# Python caches & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+
+# User storage & session media (protects privacy & keeps repo under size limits)
+storage/videos/*
+!storage/videos/.gitkeep
+storage/results/*.mp4
+!storage/results/.gitkeep
+storage/results/*.avi
+storage/history/*
+!storage/history/.gitkeep
+storage/users/*
+!storage/users/.gitkeep
+storage/reports/*
+!storage/reports/.gitkeep
+storage/users.db
+storage/*.db
+
+# Local development scripts (not deployed to Vercel)
+START.bat
+backend/start.bat
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.log
+
+# System generated
+.system_generated/
+scratch/
+# Generated traffic analysis data
+storage/traffic_db/
+storage/traffic_uploads/
+storage/traffic_results/
+storage/traffic_reports/
+
+# PyTorch model not required for deployment
+traffic_ai_complete_improved/vehicle_traffic.pt
+# AI model files
+traffic_ai_complete_improved/*.pt
+traffic_ai_complete_improved/*.onnx
+
+# Generated traffic analysis files
+storage/traffic_uploads/*
+!storage/traffic_uploads/.gitkeep
+storage/traffic_results/*
+!storage/traffic_results/.gitkeep
+storage/traffic_reports/*
+!storage/traffic_reports/.gitkeep
+
+# Local database
+storage/traffic_db/*
+!storage/traffic_db/.gitkeep

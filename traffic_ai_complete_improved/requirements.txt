@@ -1,0 +1,10 @@
+# Training/optional development dependencies for the bundled UVH-26 model.
+# The main Windows app does not need this file; START.bat installs the much
+# smaller root requirements.txt and runs the portable ONNX inference path.
+ultralytics>=8.3.0
+opencv-python>=4.10.0,<5
+numpy>=2.1.0,<3; python_version >= "3.12"
+numpy>=1.26.0,<2; python_version < "3.12"
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9

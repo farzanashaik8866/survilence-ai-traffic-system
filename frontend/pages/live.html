@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Monitoring — SURVILLENCE TRAFFIC</title>
+<link rel="stylesheet" href="/css/design-system.css"><link rel="stylesheet" href="/css/components.css"><link rel="stylesheet" href="/css/pages.css"><link rel="stylesheet" href="/css/visual-enhancements.css"><link rel="stylesheet" href="/css/visual-enhancements-v2.css">
+</head>
+<body class="app-shell"><div class="app-content"><main class="page-main">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+    <div><h2>Multi-Camera Dashboard</h2><p class="text-sm text-muted" style="margin-top:4px">Monitor all registered CCTV/IP/Webcam sources with live vehicle sampling.</p></div>
+    <div style="display:flex;gap:8px"><span class="badge badge-success" id="live-status">MONITORING</span><a href="/cameras" class="btn btn-secondary btn-sm">Manage Cameras</a></div>
+  </div>
+
+  <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:18px">
+    <div class="stat-card"><div class="stat-card-label">Cameras</div><div id="sum-cameras" class="stat-card-value">0</div><div class="stat-card-footer">Configured sources</div></div>
+    <div class="stat-card"><div class="stat-card-label">Online</div><div id="sum-online" class="stat-card-value text-success">0</div><div class="stat-card-footer">Reachable feeds</div></div>
+    <div class="stat-card"><div class="stat-card-label">Vehicles Sampled</div><div id="sum-vehicles" class="stat-card-value">0</div><div class="stat-card-footer">Across current frames</div></div>
+    <div class="stat-card"><div class="stat-card-label">Open Alerts</div><div id="sum-alerts" class="stat-card-value">0</div><div class="stat-card-footer">Unacknowledged incidents</div></div>
+  </div>
+
+  <div class="multi-camera-grid" id="live-grid"><div class="card" style="grid-column:1/-1;text-align:center;padding:50px"><div class="loading-spinner" style="margin:auto"></div><div class="text-sm text-muted" style="margin-top:12px">Loading camera feeds…</div></div></div>
+
+  <div class="chart-card" style="margin-top:18px">
+    <div class="chart-card-header"><div><div class="chart-card-title">Traffic Alerts</div><div class="text-xs text-muted">Incidents created by completed AI analyses appear here.</div></div><button id="refresh-alerts" class="btn btn-secondary btn-sm">Refresh</button></div>
+    <div id="alert-feed"><div class="text-sm text-muted">Loading alerts…</div></div>
+  </div>
+</main></div>
+<script src="/js/auth.js"></script><script src="/js/api-client.js"></script><script src="/js/shell.js"></script>
+<script>
+if(!Auth.requireAuth()) throw new Error('Not authenticated');
+let cams=[];
+document.addEventListener('DOMContentLoaded',()=>{renderShell('Live Monitoring');load();setInterval(refreshStats,5000);setInterval(loadAlerts,10000);});
+async function load(){await loadCameras();await loadAlerts();}
+async function loadCameras(){ cams=await ApiClient.getCameras(); document.getElementById('sum-cameras').textContent=cams.length; const grid=document.getElementById('live-grid'); if(!cams.length){grid.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center;padding:50px"><div class="empty-state-title">No cameras configured</div><div class="empty-state-desc">Add CCTV/IP/Webcam sources to begin multi-camera monitoring.</div><a class="btn btn-primary" style="margin-top:15px" href="/cameras">Add Camera</a></div>';return;} grid.innerHTML=cams.map(c=>`<div class="live-camera-card card" id="camcard-${c.id}"><div class="live-camera-head"><div><div class="font-semibold">${c.name}</div><div class="text-xs text-muted">${c.type} · ${c.status||'UNKNOWN'}</div></div><span class="badge ${c.status==='ONLINE'?'badge-success':'badge-muted'}" id="camstatus-${c.id}">${c.status||'UNKNOWN'}</span></div><div class="live-camera-frame"><img src="${ApiClient.cameraStreamUrl(c.id)}" alt="${c.name} live feed" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><div style="display:none" class="text-xs text-muted">Stream unavailable</div></div><div class="live-camera-foot"><span class="live-stat-pill">Vehicles <strong id="camv-${c.id}">—</strong></span><span class="live-stat-pill">Cars <strong id="camcar-${c.id}">—</strong></span><span class="live-stat-pill">Moto <strong id="cammoto-${c.id}">—</strong></span><a class="btn btn-ghost btn-sm" href="/surveillance?camera=${c.id}">Details</a></div></div>`).join(''); await refreshStats();}
+async function refreshStats(){let online=0,total=0;await Promise.all(cams.map(async c=>{try{const r=await ApiClient.getCameraStats(c.id);const s=r.stats||{}; if(s.status==='ONLINE')online++; total+=s.active_vehicles||0; const ids=[['camv',s.active_vehicles],['camcar',s.cars],['cammoto',s.motorcycles]];ids.forEach(([x,v])=>{const el=document.getElementById(`${x}-${c.id}`);if(el)el.textContent=v??0});const st=document.getElementById(`camstatus-${c.id}`);if(st){st.textContent=s.status||'UNKNOWN';st.className='badge '+(s.status==='ONLINE'?'badge-success':'badge-muted')}}catch{}}));document.getElementById('sum-online').textContent=online;document.getElementById('sum-vehicles').textContent=total;document.getElementById('live-status').textContent=online?`LIVE · ${online} ONLINE`:'NO LIVE SIGNAL';}
+async function loadAlerts(){try{const alerts=await ApiClient.getAlerts();const open=alerts.filter(a=>!a.acknowledged);document.getElementById('sum-alerts').textContent=open.length;const host=document.getElementById('alert-feed');host.innerHTML=alerts.length?alerts.slice(0,20).map(a=>`<div class="incident-row"><span class="incident-dot ${a.severity==='MEDIUM'?'medium':''}"></span><div style="flex:1"><div style="display:flex;justify-content:space-between;gap:10px"><strong style="font-size:12px">${a.type}</strong><span class="text-xs text-dim">${a.createdAt?formatDate(a.createdAt):''}</span></div><div class="text-xs text-muted" style="margin-top:3px">${a.message}</div></div>${a.acknowledged?'':'<button class="btn btn-ghost btn-sm alert-ack" data-id="'+a.id+'">Clear</button>'}</div>`).join(''):'<div class="text-sm text-muted" style="padding:12px 0">No traffic alerts recorded.</div>';document.querySelectorAll('.alert-ack').forEach(b=>b.onclick=async()=>{await ApiClient.acknowledgeAlert(b.dataset.id);loadAlerts();});}catch(e){document.getElementById('alert-feed').innerHTML='<div class="text-sm text-muted">Alert service unavailable.</div>';}}
+document.getElementById('refresh-alerts').onclick=loadAlerts;
+</script><script src="/js/visual-enhancements.js"></script>
+</body></html>

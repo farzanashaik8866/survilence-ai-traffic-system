@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Command Center — SURVILLENCE TRAFFIC</title>
+<link rel="stylesheet" href="/css/design-system.css"><link rel="stylesheet" href="/css/components.css"><link rel="stylesheet" href="/css/pages.css"><link rel="stylesheet" href="/css/visual-enhancements.css"><link rel="stylesheet" href="/css/visual-enhancements-v2.css">
+</head>
+<body class="app-shell"><div class="app-content"><main class="page-main">
+  <div class="command-hero animate-fade-in">
+    <div><div class="eyebrow">LIVE TRAFFIC INTELLIGENCE</div><h2>Command Center</h2><p class="text-sm text-muted">One operational view of safety signals, traffic load, camera readiness and AI analysis quality.</p></div>
+    <div class="command-hero-actions"><a class="btn btn-secondary btn-sm" href="/traffic-ai">Traffic AI</a><a class="btn btn-primary btn-sm" href="/surveillance">New Analysis</a></div>
+  </div>
+
+  <div id="cc-empty" class="card" style="display:none;text-align:center;padding:50px">
+    <div class="empty-state"><div class="empty-state-title">No completed analysis yet</div><div class="empty-state-desc">Run a traffic video analysis and this command center will turn the results into an operational brief.</div><a href="/surveillance" class="btn btn-primary" style="margin-top:15px">Start Analysis</a></div>
+  </div>
+
+  <section id="cc-content" style="display:none">
+    <div class="command-score-grid">
+      <div class="command-score-card card">
+        <div class="score-ring" id="score-ring"><div><span id="safety-score">—</span><small>/100</small></div></div>
+        <div class="score-meta"><div class="eyebrow">TRAFFIC SAFETY SIGNAL</div><h3 id="score-title">Operational score</h3><p id="score-copy" class="text-sm text-muted">Derived from confirmed incident signals in the latest analysis.</p></div>
+      </div>
+      <div class="command-metric card"><span class="command-icon">◫</span><div><span class="eyebrow">ANALYSIS QUALITY</span><strong id="quality-score">—</strong><span id="quality-level" class="text-xs text-muted">—</span></div></div>
+      <div class="command-metric card"><span class="command-icon">◌</span><div><span class="eyebrow">TRAFFIC LEVEL</span><strong id="traffic-level">—</strong><span id="total-vehicles" class="text-xs text-muted">— vehicles</span></div></div>
+      <div class="command-metric card"><span class="command-icon">◉</span><div><span class="eyebrow">CAMERA READINESS</span><strong id="camera-readiness">—</strong><span id="camera-detail" class="text-xs text-muted">—</span></div></div>
+    </div>
+
+    <div class="command-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-header"><div><div class="chart-card-title">AI Situation Brief</div><div class="chart-card-sub">Automatically generated from the latest real report.</div></div><span class="badge badge-accent" id="brief-session">—</span></div>
+        <div id="situation-brief" class="situation-brief"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header"><div><div class="chart-card-title">Priority Signals</div><div class="chart-card-sub">What deserves investigation first.</div></div></div>
+        <div id="priority-signals"></div>
+      </div>
+    </div>
+
+    <div class="command-grid-2" style="margin-top:18px">
+      <div class="chart-card">
+        <div class="chart-card-header"><div><div class="chart-card-title">Spatial Traffic Heatmap</div><div class="chart-card-sub">Track occupancy sampled from confirmed vehicle trajectories.</div></div><span class="badge badge-info">Real tracked positions</span></div>
+        <div id="heatmap" class="traffic-heatmap"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header"><div><div class="chart-card-title">Lane Pressure</div><div class="chart-card-sub">Perspective-aware lane load from the latest report.</div></div><a href="/traffic-ai" class="btn btn-ghost btn-sm">Inspect</a></div>
+        <div id="lane-pressure"></div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-top:18px">
+      <div class="chart-card-header"><div><div class="chart-card-title">Incident Timeline</div><div class="chart-card-sub">Every incident is linked back to its analysis session.</div></div><a id="open-latest" class="btn btn-secondary btn-sm" href="/traffic-ai">Open Latest Analysis</a></div>
+      <div id="cc-incidents"></div>
+    </div>
+
+    <div class="chart-card command-recommendations" style="margin-top:18px">
+      <div class="chart-card-header"><div><div class="chart-card-title">Recommended Next Actions</div><div class="chart-card-sub">Practical checks generated from current evidence.</div></div></div>
+      <div id="recommendations" class="recommendation-grid"></div>
+    </div>
+  </section>
+</main></div>
+<script src="/js/auth.js"></script><script src="/js/api-client.js"></script><script src="/js/shell.js"></script>
+<script>
+if(!Auth.requireAuth()) throw new Error('Not authenticated');
+document.addEventListener('DOMContentLoaded',()=>{renderShell('Command Center');loadCommandCenter();});
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+function levelClass(v){return v==='HIGH'||v==='SEVERE'?'badge-error':v==='MEDIUM'?'badge-warning':'badge-success';}
+async function loadCommandCenter(){
+  try{const data=await ApiClient.intelligenceOverview(); if(!data.session){document.getElementById('cc-empty').style.display='block';return;} document.getElementById('cc-content').style.display='block';
+    const r=data.session.report||{}, sum=data.summary||{}, q=sum.analysis_quality||r.analysis_quality||{}, inc=r.incident_summary||{};
+    document.getElementById('safety-score').textContent=sum.safety_score??'—'; document.getElementById('quality-score').textContent=(q.score??'—')+'/100'; document.getElementById('quality-level').textContent=q.level||'—'; document.getElementById('traffic-level').textContent=sum.traffic_level||'—'; document.getElementById('total-vehicles').textContent=(sum.total_vehicles??0)+' confirmed vehicles';
+    document.getElementById('camera-readiness').textContent=`${data.cameras?.online??0}/${data.cameras?.total??0}`; document.getElementById('camera-detail').textContent='online camera sources';
+    document.getElementById('score-title').textContent=sum.safety_score>=80?'Stable traffic picture':sum.safety_score>=60?'Signals need review':'High-priority signals present';
+    const qaNote=q.notes||'Internal analysis quality is not a measured model accuracy score.'; document.getElementById('score-copy').textContent=qaNote;
+    document.getElementById('brief-session').textContent=(data.session.id||'').slice(0,18);
+    document.getElementById('open-latest').href=`/traffic-ai?session=${encodeURIComponent(data.session.id)}`;
+    renderBrief(r,sum); renderPriority(r,inc); renderHeatmap(r); renderLanes(r); renderIncidents(r,data.session.id); renderRecommendations(sum.recommendations||r.recommendations||[]);
+  }catch(e){document.getElementById('cc-empty').style.display='block';Toast.error('Command Center','Could not load intelligence overview.');}}
+function renderBrief(r,sum){const v=r.vehicle_counts||{}; const speed=r.speed||{}; const d=r.traffic_density||{}; document.getElementById('situation-brief').innerHTML=`<div class="brief-lede">${esc(sum.total_vehicles||0)} confirmed vehicles were tracked. The latest traffic state is <strong>${esc(d.level||'N/A')}</strong>.</div><div class="brief-grid"><div><span>Dominant vehicle</span><strong>${esc(Object.entries(v).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—')}</strong></div><div><span>Average speed</span><strong>${speed.average_kmh?esc(Number(speed.average_kmh).toFixed(1))+' km/h':'N/A'}</strong></div><div><span>Busiest lane</span><strong>${esc(sum.busiest_lane||'—')}</strong></div><div><span>Incidents</span><strong>${esc(sum.incident_total||0)}</strong></div></div>`;}
+function renderPriority(r,inc){const items=[]; if(inc.wrong_way)items.push(['WRONG WAY',`${inc.wrong_way} confirmed track(s)`, 'badge-error']); if(inc.speed_violation)items.push(['SPEED',`${inc.speed_violation} track(s) over threshold`, 'badge-warning']); if(inc.stopped_vehicle)items.push(['STOPPED',`${inc.stopped_vehicle} prolonged stop(s)`, 'badge-warning']); if(inc.high_congestion||inc.congestion_spike)items.push(['CONGESTION',`${(inc.high_congestion||0)+(inc.congestion_spike||0)} congestion signal(s)`, 'badge-error']); if(!items.length)items.push(['CLEAR','No configured priority signal','badge-success']); document.getElementById('priority-signals').innerHTML=items.map(x=>`<div class="priority-row"><span class="badge ${x[2]}">${x[0]}</span><span>${esc(x[1])}</span></div>`).join('');}
+function renderHeatmap(r){const h=r.spatial_heatmap||{}; const grid=h.grid||[]; const max=Math.max(1,...grid.flat()); document.getElementById('heatmap').innerHTML=grid.length?grid.map((row,ri)=>row.map((v,ci)=>`<div class="heat-cell" title="Zone ${ri+1}-${ci+1}: ${v} samples" style="--heat:${(v/max).toFixed(2)}"><span>${v||''}</span></div>`).join('')).join(''):'<div class="text-sm text-muted">No spatial samples recorded.</div>';}
+function renderLanes(r){const lanes=(r.lane_analysis||{}).lanes||{}; const vals=Object.entries(lanes); const max=Math.max(1,...vals.map(x=>x[1].peak_active||0)); document.getElementById('lane-pressure').innerHTML=vals.map(([name,v])=>`<div class="lane-pressure-row"><div style="display:flex;justify-content:space-between;gap:8px"><strong>${esc(name)}</strong><span class="text-xs text-muted">${Number(v.average_active||0).toFixed(1)} avg · ${v.peak_active||0} peak</span></div><div class="lane-pressure-bar"><span style="width:${Math.round((v.peak_active||0)/max*100)}%"></span></div></div>`).join('')||'<div class="text-sm text-muted">No lane statistics.</div>';}
+function renderIncidents(r,sid){const arr=(r.incidents||[]).slice(0,30); document.getElementById('cc-incidents').innerHTML=arr.length?arr.map(e=>`<div class="incident-row"><span class="incident-dot ${e.severity==='MEDIUM'?'medium':''}"></span><div style="flex:1"><div style="display:flex;justify-content:space-between;gap:10px"><strong>${esc(e.type||'INCIDENT')}</strong><span class="text-xs text-dim">${esc(e.time_seconds??'—')}s</span></div><div class="text-xs text-muted" style="margin-top:3px">${esc(e.message||'')}</div></div><a class="btn btn-ghost btn-sm" href="/traffic-ai?session=${encodeURIComponent(sid)}">Inspect</a></div>`).join(''):'<div class="text-sm text-muted" style="padding:10px 0">No incidents were recorded in the latest analysis.</div>';}
+function renderRecommendations(items){document.getElementById('recommendations').innerHTML=(items.length?items:['Keep monitoring the live camera panel and validate speed/lane calibration before operational use.']).map(x=>`<div class="recommendation-card"><span>✦</span><div>${esc(x)}</div></div>`).join('');}
+</script><script src="/js/visual-enhancements.js"></script>
+</body></html>

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="theme-color" content="#060a10">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Traffic AI — SURVILLENCE TRAFFIC</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <link rel="stylesheet" href="/css/visual-enhancements.css">
+  <link rel="stylesheet" href="/css/visual-enhancements-v2.css">
+</head>
+<body class="app-shell">
+<div class="app-content">
+  <main class="page-main">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5)" class="animate-fade-in">
+      <div>
+        <h2>Traffic AI</h2>
+        <p class="text-sm text-muted" style="margin-top:4px">Explainable intelligence from confirmed detections and trajectories</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><a href="/command-center" class="btn btn-secondary btn-sm">Command Center</a><select class="form-select" id="session-select" style="width:280px">
+        <option value="">Select analysis session...</option>
+      </select></div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="ai-empty" class="card" style="text-align:center;padding:var(--space-12)" class="animate-fade-in">
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="empty-state-title">No AI insights available yet</div>
+        <div class="empty-state-desc">Insights are derived only from real detector output. Run an analysis to generate traffic intelligence.</div>
+        <a href="/surveillance" class="btn btn-primary" style="margin-top:var(--space-4)">Start Analysis</a>
+      </div>
+    </div>
+
+    <!-- Insights content -->
+    <div id="ai-content" style="display:none">
+
+      <!-- Headline insight cards -->
+      <div class="stats-grid" id="insight-cards" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin-bottom:var(--space-6)"></div>
+
+      <!-- Unique investigation mode: use incident timestamps to replay the evidence frame -->
+      <div class="chart-card incident-investigator-card" style="margin-bottom:var(--space-5)">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">AI Incident Investigator</div><div class="text-xs text-muted">Jump from an alert to the exact point in the processed video and ask Traffic Copilot for an explanation.</div></div>
+          <span class="badge badge-accent">REPLAY MODE</span>
+        </div>
+        <div class="investigator-grid">
+          <div class="investigator-video-wrap">
+            <video id="incident-replay-video" controls preload="metadata" playsinline></video>
+            <div id="incident-replay-empty" class="investigator-empty">Select a session with a retained result video.</div>
+            <div id="incident-replay-readout" class="investigator-readout">Ready · 00:00</div>
+          </div>
+          <div class="investigator-copy">
+            <div class="eyebrow">Why this is useful</div>
+            <h3 style="margin:4px 0 8px">Investigate, don't just count.</h3>
+            <p class="text-sm text-muted" style="line-height:1.6">Every confirmed incident keeps its timestamp, track ID, class and lane. Replay the evidence before acting on an alert.</p>
+            <div class="investigator-checklist">
+              <div>✓ Confirm the vehicle trajectory</div>
+              <div>✓ Check lane assignment</div>
+              <div>✓ Review speed / wrong-way context</div>
+              <div>✓ Ask Copilot for an explanation</div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="investigator-ask-btn" disabled>Ask Copilot about this session</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <!-- Left: detailed insights -->
+        <div style="display:flex;flex-direction:column;gap:var(--space-5)">
+
+          <div class="chart-card animate-fade-in delay-1">
+            <div class="chart-card-header">
+              <div class="chart-card-title">Traffic Density Assessment</div>
+            </div>
+            <div id="density-insight"></div>
+          </div>
+
+          <div class="chart-card animate-fade-in delay-2">
+            <div class="chart-card-header">
+              <div class="chart-card-title">Vehicle Flow Analysis</div>
+            </div>
+            <div id="flow-insight"></div>
+          </div>
+
+          <div class="chart-card animate-fade-in delay-3">
+            <div class="chart-card-header">
+              <div class="chart-card-title">Detection Summary</div>
+            </div>
+            <div id="detection-summary"></div>
+          </div>
+        </div>
+
+        <!-- Right: quick stats -->
+        <div style="display:flex;flex-direction:column;gap:var(--space-5)">
+          <div class="chart-card animate-fade-in delay-1">
+            <div class="chart-card-header">
+              <div class="chart-card-title">Key Metrics</div>
+            </div>
+            <div id="key-metrics" style="display:flex;flex-direction:column;gap:10px"></div>
+          </div>
+
+          <div class="chart-card animate-fade-in delay-2">
+            <div class="chart-card-header">
+              <div class="chart-card-title">Vehicle Intelligence</div>
+            </div>
+            <div id="vehicle-intel" style="display:flex;flex-direction:column;gap:10px"></div>
+          </div>
+
+          <div class="chart-card animate-fade-in delay-3" id="speed-intel-card" style="display:none">
+            <div class="chart-card-header">
+              <div class="chart-card-title">Speed Intelligence</div>
+            </div>
+            <div id="speed-intel" style="display:flex;flex-direction:column;gap:10px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.15fr .85fr;gap:var(--space-5);margin-top:var(--space-5)">
+        <div class="chart-card">
+          <div class="chart-card-header"><div class="chart-card-title">Lane-wise Traffic Analysis</div><span class="badge badge-info" id="lane-count-badge">— lanes</span></div>
+          <div id="lane-analysis-table"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header"><div class="chart-card-title">Safety & Incident Intelligence</div></div>
+          <div id="incident-summary-cards" class="feature-stat-grid"></div>
+          <div id="incident-timeline" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-top:var(--space-5)">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">Tracked Vehicle Search</div><div class="text-xs text-muted">Search this session without leaving Traffic AI.</div></div>
+          <a class="btn btn-secondary btn-sm" href="/vehicle-search">Open Vehicle Search</a>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <input id="session-vehicle-search" class="form-input" style="max-width:240px" placeholder="Track ID, vehicle type…">
+          <button id="session-search-btn" class="btn btn-primary btn-sm">Search</button>
+        </div>
+        <div id="session-search-results"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5);margin-top:var(--space-5)">
+        <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">Analysis Quality</div><div class="text-xs text-muted">Internal consistency signals — not benchmark accuracy.</div></div><span id="analysis-quality-badge" class="badge badge-muted">—</span></div><div id="analysis-quality-panel"></div></div>
+        <div class="chart-card"><div class="chart-card-header"><div><div class="chart-card-title">Spatial Hotspots</div><div class="text-xs text-muted">Where confirmed tracked positions accumulated.</div></div></div><div id="traffic-ai-heatmap" class="traffic-heatmap"></div></div>
+      </div>
+      <div class="chart-card" style="margin-top:var(--space-5)"><div class="chart-card-header"><div><div class="chart-card-title">Recommended Actions</div><div class="text-xs text-muted">Evidence-based checks generated from the current report.</div></div></div><div id="traffic-ai-recommendations" class="recommendation-grid"></div></div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/auth.js"></script>
+<script src="/js/api-client.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+if (!Auth.requireAuth()) throw new Error('Not authenticated');
+document.addEventListener('DOMContentLoaded', () => {
+  renderShell('Traffic AI');
+  loadSessions();
+});
+
+document.getElementById('session-select').addEventListener('change', function() {
+  if (this.value) loadInsights(this.value);
+  else showEmpty();
+});
+
+async function loadSessions() {
+  try {
+    const history = await ApiClient.getHistory();
+    const sel = document.getElementById('session-select');
+    const completed = history.filter(h => h.status === 'completed');
+    completed.forEach(h => {
+      const sid = h.sessionId || h.session_id;
+      const opt = document.createElement('option');
+      opt.value = sid;
+      opt.textContent = `${h.filename} — ${formatDate(h.date)}`;
+      sel.appendChild(opt);
+    });
+    const urlSid = new URLSearchParams(window.location.search).get('session') || new URLSearchParams(window.location.search).get('sessionId');
+    if (urlSid && completed.some(h => (h.sessionId || h.session_id) === urlSid)) {
+      sel.value = urlSid;
+      loadInsights(urlSid);
+    } else if (completed.length > 0) {
+      const firstSid = completed[0].sessionId || completed[0].session_id;
+      sel.value = firstSid;
+      loadInsights(firstSid);
+    } else {
+      showEmpty();
+    }
+  } catch {
+    showEmpty();
+  }
+}
+
+function showEmpty() {
+  document.getElementById('ai-empty').style.display = 'block';
+  document.getElementById('ai-content').style.display = 'none';
+}
+
+async function loadInsights(sessionId) {
+  try {
+    const res = await ApiClient.getResult(sessionId);
+    if (!res.report) { showEmpty(); return; }
+    renderInsights(res.report);
+    loadIncidentReplay(sessionId, res.report);
+  } catch (err) {
+    Toast.error('Load failed', err.message);
+    showEmpty();
+  }
+}
+
+function statRow(label, value) {
+  return `<div class="surv-stat-item"><span class="surv-stat-label">${label}</span><span class="font-medium" style="color:var(--text-primary);font-size:0.875rem">${value ?? 'N/A'}</span></div>`;
+}
+
+function renderInsights(report) {
+  document.getElementById('ai-empty').style.display = 'none';
+  document.getElementById('ai-content').style.display = 'block';
+
+  const v     = report.vehicle_counts || report.vehicles || {};
+  const total = report.total_vehicles ?? report.total_unique ?? 0;
+  const car   = v.car ?? report.cars ?? 0;
+  const moto  = v.motorcycle ?? report.motorcycles ?? 0;
+  const auto  = v.auto ?? v.auto_rickshaw ?? report.auto_rickshaws ?? 0;
+  const bus   = v.bus ?? report.buses ?? 0;
+  const truck = v.truck ?? report.trucks ?? 0;
+  const density = report.traffic_density || report.traffic || {};
+  const level   = density.level || density.density || 'N/A';
+  const avgA    = density.average_active ?? density.average_active_vehicles ?? null;
+  const peakA   = density.peak_active ?? density.peak_active_vehicles ?? null;
+  const active  = report.active_now ?? 0;
+
+  // Dominant vehicle
+  const counts = { Car: car, Motorcycle: moto, Auto: auto, Bus: bus, Truck: truck };
+  const dominant = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  const dominantPct = total > 0 && dominant ? ((dominant[1]/total)*100).toFixed(1) : null;
+
+  const levelCls = { LOW:'badge-success', MEDIUM:'badge-warning', HIGH:'badge-error', SEVERE:'badge-error' };
+
+  // Insight cards
+  const cards = [
+    { label:'Traffic Density', val: level, badge: levelCls[level]||'badge-muted' },
+    { label:'Dominant Type', val: dominant?dominant[0]:'N/A', badge:'badge-accent' },
+    { label:'Total Detected', val: total, badge:'badge-info' },
+    { label:'Peak Active', val: peakA ?? 'N/A', badge:'badge-muted' },
+  ];
+  document.getElementById('insight-cards').innerHTML = cards.map((c,i) => `
+    <div class="stat-card animate-fade-in delay-${i+1}">
+      <div class="stat-card-top">
+        <span class="stat-card-label">${c.label}</span>
+      </div>
+      <div class="stat-card-value" style="font-size:1.5rem">${c.val}</div>
+      <div class="stat-card-footer"><span class="badge ${c.badge}">${c.label}</span></div>
+    </div>`).join('');
+
+  // Density insight
+  const densityDesc = {
+    LOW:    'Traffic is light. Fewer than 8 vehicles active simultaneously.',
+    MEDIUM: 'Moderate traffic. Between 9–20 vehicles active at once.',
+    HIGH:   'High traffic load. 21–35 vehicles active simultaneously.',
+    SEVERE: 'Severe congestion. More than 35 vehicles active simultaneously.',
+  };
+  document.getElementById('density-insight').innerHTML = `
+    <div style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) 0">
+      <div style="width:56px;height:56px;border-radius:50%;background:${level==='LOW'?'var(--success-bg)':level==='MEDIUM'?'var(--warning-bg)':'var(--error-bg)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <span style="font-size:1.5rem">${level==='LOW'?'🟢':level==='MEDIUM'?'🟡':'🔴'}</span>
+      </div>
+      <div>
+        <div class="font-semibold" style="margin-bottom:4px">${level} Traffic</div>
+        <p class="text-sm text-muted" style="line-height:1.6">${densityDesc[level] || 'Traffic density level determined from tracked vehicle counts.'}</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${statRow('Average Active', avgA != null ? avgA.toFixed(2) + ' vehicles' : 'N/A')}
+      ${statRow('Peak Active', peakA != null ? peakA + ' vehicles' : 'N/A')}
+      ${statRow('Active at End', active + ' vehicles')}
+    </div>`;
+
+  // Flow insight
+  const dc = report.direction_counts || {};
+  const up = dc.UP ?? 0, down = dc.DOWN ?? 0, unk = dc.UNKNOWN ?? total;
+  const hasDir = (up > 0 || down > 0);
+  document.getElementById('flow-insight').innerHTML = hasDir ? `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${statRow('Going Up (Away)', up + ' vehicles')}
+      ${statRow('Going Down (Toward)', down + ' vehicles')}
+      ${statRow('Direction Unknown', unk + ' vehicles')}
+      <p class="text-xs text-muted" style="margin-top:4px;line-height:1.5">Direction is estimated from vertical motion trajectory. No counting line is used.</p>
+    </div>` : `
+    <div class="empty-state" style="padding:var(--space-6)">
+      <div class="empty-state-desc">Insufficient motion data to determine vehicle flow direction. Direction shown as Unknown for all vehicles.</div>
+    </div>`;
+
+  // Detection summary
+  document.getElementById('detection-summary').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${statRow('Total Unique Vehicles', total)}
+      ${statRow('Detection Model', report.model_source || 'UVH-26 YOLOv11-S')}
+      ${statRow('Tracking Algorithm', 'ByteTrack')}
+      ${statRow('Counting Method', 'Track-identity based (no counting line)')}
+      ${statRow('Video Duration', formatDuration(report.video_duration))}
+      ${statRow('Processing Time', formatDuration(report.processing_time_seconds))}
+      ${statRow('Frames Processed', report.frames_processed ?? 'N/A')}
+    </div>`;
+
+  // Key metrics
+  document.getElementById('key-metrics').innerHTML = `
+    ${statRow('Total Vehicles', total)}
+    ${statRow('Active (End)', active)}
+    ${statRow('Video Duration', formatDuration(report.video_duration))}
+    ${statRow('Avg Vehicles/Min', report.video_duration > 0 ? (total / (report.video_duration / 60)).toFixed(1) : 'N/A')}`;
+
+  // Vehicle intelligence
+  document.getElementById('vehicle-intel').innerHTML = `
+    ${statRow('Dominant Category', dominant ? dominant[0] + (dominantPct ? ` (${dominantPct}%)` : '') : 'N/A')}
+    ${statRow('Cars', car + (total>0 ? ' ('+((car/total)*100).toFixed(0)+'%)' : ''))}
+    ${statRow('Motorcycles', moto + (total>0 ? ' ('+((moto/total)*100).toFixed(0)+'%)' : ''))}
+    ${statRow('Autos', auto + (total>0 ? ' ('+((auto/total)*100).toFixed(0)+'%)' : ''))}
+    ${statRow('Buses', bus + (total>0 ? ' ('+((bus/total)*100).toFixed(0)+'%)' : ''))}
+    ${statRow('Trucks', truck + (total>0 ? ' ('+((truck/total)*100).toFixed(0)+'%)' : ''))}`;
+
+  // Speed intelligence
+  const sp = report.speed || {};
+  if (sp.average_pixels_per_second > 0 || sp.average_kmh > 0) {
+    document.getElementById('speed-intel-card').style.display = 'block';
+    document.getElementById('speed-intel').innerHTML = `
+      ${statRow('Estimated Average', sp.average_kmh ? sp.average_kmh.toFixed(1) + ' km/h' : 'N/A')}
+      ${statRow('Speed Limit', (report.speed_violations?.limit_kmh ?? sp.speed_limit_kmh ?? 'N/A') + (report.speed_violations?.limit_kmh ? ' km/h' : ''))}
+      ${statRow('Violations', report.speed_violations?.count ?? 0)}
+      <p class="text-xs text-muted" style="margin-top:4px;line-height:1.5">Speed uses tracked motion plus the configured meters-per-pixel scale. Treat it as an estimate until the camera is calibrated.</p>`;
+  }
+
+  renderAdvancedInsights(report);
+}
+
+function renderAdvancedInsights(report) {
+  const quality = report.analysis_quality || {};
+  const qbadge = document.getElementById('analysis-quality-badge');
+  if(qbadge){qbadge.textContent = `${quality.score ?? '—'}/100 · ${quality.level ?? '—'}`; qbadge.className='badge ' + (quality.level==='HIGH'?'badge-success':quality.level==='MEDIUM'?'badge-warning':'badge-error');}
+  document.getElementById('analysis-quality-panel').innerHTML = `
+    ${statRow('Average Detection Confidence', quality.average_detection_confidence!=null ? (quality.average_detection_confidence*100).toFixed(1)+'%' : 'N/A')}
+    ${statRow('Confirmed / Started Tracks', quality.confirmed_track_ratio!=null ? (quality.confirmed_track_ratio*100).toFixed(1)+'%' : 'N/A')}
+    ${statRow('Stable Track Ratio', quality.stable_track_ratio!=null ? (quality.stable_track_ratio*100).toFixed(1)+'%' : 'N/A')}
+    <p class="text-xs text-muted" style="margin-top:5px;line-height:1.5">${quality.notes || 'Consistency signal only.'}</p>`;
+  const h = report.spatial_heatmap || {};
+  const grid = h.grid || []; const hmax = Math.max(1, ...grid.flat());
+  document.getElementById('traffic-ai-heatmap').innerHTML = grid.length ? grid.map((row,ri)=>row.map((val,ci)=>`<div class="heat-cell" style="--heat:${(val/hmax).toFixed(2)}" title="Zone ${ri+1}-${ci+1}: ${val} samples"><span>${val||''}</span></div>`).join('')).join('') : '<div class="text-sm text-muted">No spatial samples.</div>';
+  document.getElementById('traffic-ai-recommendations').innerHTML = (report.recommendations || ['Keep monitoring current traffic signals.']).map(x=>`<div class="recommendation-card"><span>✦</span><div>${String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}</div></div>`).join('');
+
+  const lane = report.lane_analysis || {lane_count:0,lanes:{}};
+  const laneEntries = Object.entries(lane.lanes || {});
+  document.getElementById('lane-count-badge').textContent = `${lane.lane_count || laneEntries.length} lanes`;
+  document.getElementById('lane-analysis-table').innerHTML = laneEntries.length ? `
+    <div style="overflow:auto"><table class="data-table" style="width:100%"><thead><tr><th>Lane</th><th>Vehicles</th><th>Peak Active</th><th>Avg Speed</th></tr></thead><tbody>${laneEntries.map(([name,d])=>`<tr><td><strong>${name}</strong></td><td>${d.unique_vehicles ?? 0}</td><td>${d.peak_active ?? 0}</td><td>${d.average_speed_kmh ? d.average_speed_kmh.toFixed(1)+' km/h' : 'N/A'}</td></tr>`).join('')}</tbody></table></div>` : '<div class="text-sm text-muted">Lane statistics are not available for this session.</div>';
+
+  const inc = report.incident_summary || {};
+  document.getElementById('incident-summary-cards').innerHTML = [
+    ['Total Incidents', inc.total ?? 0], ['Wrong Way', inc.wrong_way ?? 0], ['Speed', inc.speed_violation ?? 0], ['Stopped', inc.stopped_vehicle ?? 0], ['Congestion', inc.high_congestion ?? 0]
+  ].map(([a,b])=>`<div class="feature-chip"><span>${a}</span><strong>${b}</strong></div>`).join('');
+  const events = (report.incidents || []).slice(0, 30);
+  document.getElementById('incident-timeline').innerHTML = events.length ? events.map((e,i)=>`<div class="incident-row"><span class="incident-dot ${e.severity==='MEDIUM'?'medium':''}"></span><div style="flex:1"><div style="display:flex;justify-content:space-between;gap:8px"><strong style="font-size:12px">${esc(e.type||'INCIDENT')}</strong><span class="text-xs text-dim">${esc(e.time_seconds??'—')}s</span></div><div class="text-xs text-muted">${esc(e.message||'')}</div><div class="investigator-inline-actions"><button type="button" class="btn btn-ghost btn-sm incident-replay-btn" data-time="${Number(e.time_seconds)||0}">▶ Replay evidence</button><button type="button" class="btn btn-ghost btn-sm incident-copilot-btn" data-type="${escAttr(e.type||'incident')}" data-message="${escAttr(e.message||'')}">✦ Ask Copilot</button></div></div></div>`).join('') : '<div class="text-xs text-muted" style="margin-top:12px">No incidents detected.</div>';
+  bindIncidentInvestigatorButtons();
+
+  function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+  function escAttr(v){return esc(v).replace(/`/g,'&#096;');}
+
+  const input=document.getElementById('session-vehicle-search'); const btn=document.getElementById('session-search-btn');
+  btn.onclick=()=>{ const q=input.value.trim().toLowerCase(); const rows=(report.vehicles_detail||[]).filter(v=>!q || JSON.stringify(v).toLowerCase().includes(q)); document.getElementById('session-search-results').innerHTML=rows.length?rows.slice(0,30).map(v=>`<div class="vehicle-result"><strong>#${v.track_id}</strong><div><div>${v.type||v.class||'Vehicle'} · Lane ${v.lane||'—'} · ${v.direction||'UNKNOWN'}</div><div class="text-xs text-muted">${v.speed_kmh ? v.speed_kmh.toFixed(1)+' km/h' : 'Speed N/A'}${v.speed_violation?' · SPEED VIOLATION':''}${v.wrong_way?' · WRONG WAY':''}</div></div><a class="btn btn-ghost btn-sm" href="/vehicle-search?q=${encodeURIComponent(v.track_id)}">Details</a></div>`).join(''):'<div class="text-sm text-muted">No matching tracked vehicles.</div>'; };
+}
+
+
+  function loadIncidentReplay(sessionId, report){
+    const video=document.getElementById('incident-replay-video');
+    const empty=document.getElementById('incident-replay-empty');
+    const readout=document.getElementById('incident-replay-readout');
+    const ask=document.getElementById('investigator-ask-btn');
+    if(!video) return;
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    const url = ApiClient.videoUrl(sessionId);
+    video.src = url;
+    video.load();
+    empty.style.display='none';
+    ask.disabled=false;
+    ask.onclick=()=>{ if(window.TrafficCopilotAsk) window.TrafficCopilotAsk('Explain the incidents in this traffic analysis and what evidence I should verify.'); };
+    video.ontimeupdate=()=>{ if(readout) readout.textContent=`Replay position · ${formatDuration(video.currentTime||0)}`; };
+    video.onerror=()=>{ empty.style.display='grid'; empty.textContent='Result video is not currently retained. The incident metadata is still available for review.'; };
+  }
+
+  function bindIncidentInvestigatorButtons(){
+    const video=document.getElementById('incident-replay-video');
+    document.querySelectorAll('.incident-replay-btn').forEach(btn=>btn.onclick=()=>{ const t=Number(btn.dataset.time)||0; if(video && video.src){ video.currentTime=t; video.play().catch(()=>{}); video.scrollIntoView({behavior:'smooth',block:'center'}); }});
+    document.querySelectorAll('.incident-copilot-btn').forEach(btn=>btn.onclick=()=>{ const type=btn.dataset.type||'incident'; const detail=btn.dataset.message||''; if(window.TrafficCopilotAsk) window.TrafficCopilotAsk(`Explain why this ${type} alert triggered. Evidence: ${detail}`); });
+  }
+</script>
+  <script src="/js/visual-enhancements.js"></script>
+</body>
+</html>

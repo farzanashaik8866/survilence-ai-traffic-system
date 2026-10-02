@@ -1,0 +1,3 @@
+# Legacy backend folder is retained for compatibility. Use the root START.bat
+# and root requirements.txt for the supported unified application.
+-r ../requirements.txt

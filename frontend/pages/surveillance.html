@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="theme-color" content="#060a10">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Surveillance — SURVILLENCE TRAFFIC</title>
+  <link rel="stylesheet" href="/css/design-system.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <link rel="stylesheet" href="/css/visual-enhancements.css">
+  <link rel="stylesheet" href="/css/visual-enhancements-v2.css">
+</head>
+<body class="app-shell">
+
+<div class="app-content">
+  <main class="page-main">
+
+    <!-- Page Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5)" class="animate-fade-in">
+      <div>
+        <h2>Surveillance</h2>
+        <p class="text-sm text-muted" style="margin-top:4px">Process traffic videos using the AI detection engine</p>
+      </div>
+      <div style="display:flex;gap:var(--space-3);align-items:center">
+        <span id="session-badge" class="badge badge-muted" style="font-family:var(--font-mono);font-size:0.7rem"></span>
+      </div>
+    </div>
+
+    <!-- Upload Section (shown when no session active) -->
+    <div id="upload-section" class="animate-fade-in">
+      <div class="upload-zone" id="drop-zone" role="button" tabindex="0" aria-label="Upload video file">
+        <svg class="upload-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div class="upload-zone-title">Drop your traffic video here</div>
+        <div class="upload-zone-sub">or <span style="color:var(--accent-light);cursor:pointer" id="browse-link">browse to select</span></div>
+        <div style="margin-top:var(--space-3)" class="text-xs text-muted">Supports MP4, AVI, MOV, MKV, WebM · Max 2 GB</div>
+      </div>
+      <input type="file" id="video-input" accept=".mp4,.avi,.mov,.mkv,.webm,.m4v" style="display:none" aria-label="Select video file">
+
+      <!-- Intelligence Rules -->
+      <div class="card" style="margin-top:var(--space-4)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:var(--space-4)">
+          <div><div class="font-semibold">AI Traffic Rules</div><div class="text-xs text-muted">Configure the rules used for wrong-way, speed, lane and incident analysis. Auto-detect learns lane flow only after multiple stable tracks; single/noisy tracks are not treated as wrong-way.</div></div>
+          <span class="badge badge-accent">8 Intelligence Features</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+          <div class="form-group"><label class="form-label">Expected Direction</label><select id="expected-direction" class="form-input"><option value="AUTO" selected>Auto-detect lane flow</option><option value="DOWN">Down / Toward</option><option value="UP">Up / Away</option><option value="BOTH">Both Directions</option></select></div>
+          <div class="form-group"><label class="form-label">Speed Limit (km/h)</label><input id="speed-limit" class="form-input" type="number" min="1" value="40"><div class="text-xs text-muted">Violation alerts require calibrated reference gates.</div></div>
+          <div class="form-group"><label class="form-label">Stopped Vehicle Alert (sec)</label><input id="stopped-seconds" class="form-input" type="number" min="2" value="5"></div>
+          <div class="form-group"><label class="form-label">Detection Confidence</label><input id="analysis-confidence" class="form-input" type="number" min="0.10" max="0.70" step="0.05" value="0.30"></div>
+          <div class="form-group"><label class="form-label">Inference Size</label><select id="analysis-image-size" class="form-input"><option>512</option><option selected>640</option><option>768</option><option>960</option></select></div>
+          <div class="form-group"><label class="form-label">Frame Stride</label><select id="analysis-frame-stride" class="form-input"><option selected>1</option><option>2</option><option>3</option></select></div>
+          <div class="form-group"><label class="form-label">Lane Count</label><select id="lane-count" class="form-input"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></div>
+        </div>
+        <details style="margin-top:12px" class="analysis-advanced">
+          <summary class="text-sm font-semibold" style="cursor:pointer">Advanced accuracy calibration</summary>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:12px">
+            <div class="form-group"><label class="form-label">Meters / Pixel fallback</label><input id="meters-per-pixel" class="form-input" type="number" min="0.0001" step="0.001" value="0.05"></div>
+            <div class="form-group"><label class="form-label">Speed Margin (km/h)</label><input id="speed-margin" class="form-input" type="number" min="0" max="15" step="0.5" value="3"></div>
+            <div class="form-group"><label class="form-label">Track Confirmation Frames</label><input id="confirmation-frames" class="form-input" type="number" min="2" max="8" value="3"></div>
+            <div class="form-group"><label class="form-label">Lane Top Width</label><input id="lane-top-width" class="form-input" type="number" min="0.35" max="1" step="0.05" value="0.60"></div>
+            <div class="form-group"><label class="form-label">Lane Bottom Width</label><input id="lane-bottom-width" class="form-input" type="number" min="0.60" max="1" step="0.05" value="1.00"></div>
+            <div class="form-group"><label class="form-label">Known Speed-Gate Distance (m)</label><input id="speed-reference-distance" class="form-input" type="number" min="0" step="0.5" value="0"></div>
+            <div class="form-group"><label class="form-label">Gate A (frame ratio)</label><input id="speed-gate-top" class="form-input" type="number" min="0.10" max="0.80" step="0.01" value="0.35"></div>
+            <div class="form-group"><label class="form-label">Gate B (frame ratio)</label><input id="speed-gate-bottom" class="form-input" type="number" min="0.15" max="0.95" step="0.01" value="0.70"></div>
+          </div>
+          <div class="text-xs text-muted" style="margin-top:8px;line-height:1.5">For the best speed stability, set the real distance between two virtual gates. Do not use uncalibrated km/h for enforcement decisions.</div>
+        </details>
+      </div>
+
+      <!-- Selected file preview -->
+      <div id="file-preview" style="display:none;margin-top:var(--space-4)">
+        <div class="card" style="display:flex;align-items:center;gap:var(--space-4)">
+          <div style="width:44px;height:44px;background:var(--accent-glow);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-light)" stroke-width="2" style="width:22px;height:22px"><rect x="2" y="2" width="20" height="20" rx="2"/><polygon points="10,8 16,12 10,16"/></svg>
+          </div>
+          <div style="flex:1;overflow:hidden">
+            <div id="file-name" class="font-medium truncate" style="font-size:0.9rem"></div>
+            <div id="file-size" class="text-xs text-muted" style="margin-top:2px"></div>
+          </div>
+          <div style="display:flex;gap:var(--space-2);flex-wrap:wrap">
+            <button id="clear-file" class="btn btn-ghost btn-icon btn-sm" aria-label="Remove file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <button id="start-analysis" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Start Analysis
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Processing Section (shown during analysis) -->
+    <div id="processing-section" style="display:none" class="animate-fade-in">
+      <div class="card" style="margin-bottom:var(--space-4)">
+        <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4)">
+          <div class="loading-spinner" id="proc-spinner"></div>
+          <div>
+            <div class="font-semibold" id="proc-title">Processing video with UVH-26 YOLO...</div>
+            <div class="text-xs text-muted" id="proc-file"></div>
+          </div>
+          <button id="cancel-btn" class="btn btn-ghost btn-sm ml-auto">Cancel</button>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="proc-progress" style="width: 5%; transition: width 0.4s ease;"></div>
+        </div>
+        <div class="processing-terminal" id="terminal" style="margin-top:var(--space-4)"></div>
+        <div id="proc-actions-wrap" style="display:none;justify-content:flex-end;gap:8px;margin-top:var(--space-4);flex-wrap:wrap">
+          <button type="button" id="proc-retry-btn" class="btn btn-secondary btn-sm">Back to Upload</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Section (shown after completion) -->
+    <div id="results-section" style="display:none">
+
+      <!-- Status bar above video -->
+      <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3);flex-wrap:wrap" class="animate-fade-in">
+        <span id="result-status-badge" class="badge badge-success">Analysis Complete</span>
+        <span id="result-file-label" class="text-sm text-muted"></span>
+        <span id="result-date-label" class="text-xs text-dim ml-auto"></span>
+        <button id="new-analysis-btn" class="btn btn-secondary btn-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Analysis
+        </button>
+      </div>
+
+      <div class="surveillance-grid">
+        <!-- Video Player Column -->
+        <div class="surveillance-video-col">
+          <div class="video-player-wrap">
+            <video id="result-video" controls preload="metadata">
+              Your browser does not support HTML5 video.
+            </video>
+            <div class="video-overlay-label" id="video-label">
+              <span class="dot"></span>
+              PROCESSED VIDEO
+            </div>
+          </div>
+
+          <!-- Video bottom stats bar -->
+          <div class="surveillance-mini-stats">
+            <div class="surv-stat-item surv-mini-chip">
+              <div class="surv-stat-label">TOTAL</div>
+              <div class="surv-stat-value" id="bar-total">—</div>
+            </div>
+            <div class="surv-stat-item surv-mini-chip">
+              <div class="surv-stat-label">ACTIVE</div>
+              <div class="surv-stat-value" id="bar-active">—</div>
+            </div>
+            <div class="surv-stat-item surv-mini-chip">
+              <div class="surv-stat-label">CAR</div>
+              <div class="surv-stat-value vc-car" id="bar-car">—</div>
+            </div>
+            <div class="surv-stat-item surv-mini-chip">
+              <div class="surv-stat-label">MOTO</div>
+              <div class="surv-stat-value vc-motorcycle" id="bar-moto">—</div>
+            </div>
+            <div class="surv-stat-item surv-mini-chip">
+              <div class="surv-stat-label">AUTO</div>
+              <div class="surv-stat-value vc-auto" id="bar-auto">—</div>
+            </div>
+            <div class="surv-stat-item surv-mini-chip">
+              <div class="surv-stat-label">BUS+TRK</div>
+              <div class="surv-stat-value vc-bus" id="bar-bt">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Stats Panel -->
+        <div class="surveillance-stats-panel">
+          <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);margin-bottom:var(--space-2)">Detection Results</div>
+
+          <div class="surv-stat-item">
+            <span class="surv-stat-label"><span class="dot" style="background:var(--success)"></span>Total Unique</span>
+            <span class="surv-stat-value" id="s-total">—</span>
+          </div>
+          <div class="surv-stat-item">
+            <span class="surv-stat-label"><span class="dot" style="background:var(--accent)"></span>Active (End)</span>
+            <span class="surv-stat-value" id="s-active">—</span>
+          </div>
+          <div class="surv-stat-item">
+            <span class="surv-stat-label"><span class="dot" style="background:var(--car-color)"></span>Cars</span>
+            <span class="surv-stat-value vc-car" id="s-car">—</span>
+          </div>
+          <div class="surv-stat-item">
+            <span class="surv-stat-label"><span class="dot" style="background:var(--motorcycle-color)"></span>Motorcycles</span>
+            <span class="surv-stat-value vc-motorcycle" id="s-moto">—</span>
+          </div>
+          <div class="surv-stat-item">
+            <span class="surv-stat-label"><span class="dot" style="background:var(--auto-color)"></span>Autos</span>
+            <span class="surv-stat-value vc-auto" id="s-auto">—</span>
+          </div>
+          <div class="surv-stat-item">
+            <span class="surv-stat-label"><span class="dot" style="background:var(--bus-color)"></span>Buses</span>
+            <span class="surv-stat-value vc-bus" id="s-bus">—</span>
+          </div>
+          <div class="surv-stat-item">
+            <span class="surv-stat-label"><span class="dot" style="background:var(--truck-color)"></span>Trucks</span>
+            <span class="surv-stat-value vc-truck" id="s-truck">—</span>
+          </div>
+
+          <div style="border-top:1px solid var(--border-default);margin:var(--space-2) 0"></div>
+
+          <div class="surv-stat-item">
+            <span class="surv-stat-label">Traffic Level</span>
+            <span class="badge" id="s-density">N/A</span>
+          </div>
+          <div class="surv-stat-item">
+            <span class="surv-stat-label">Avg Speed</span>
+            <span class="surv-stat-value" id="s-speed" style="font-size:0.85rem">N/A</span>
+          </div>
+          <div class="surv-stat-item">
+            <span class="surv-stat-label">Video Duration</span>
+            <span class="surv-stat-value" id="s-duration" style="font-size:0.85rem">—</span>
+          </div>
+          <div class="surv-stat-item">
+            <span class="surv-stat-label">Proc. Time</span>
+            <span class="surv-stat-value" id="s-proctime" style="font-size:0.85rem">—</span>
+          </div>
+
+          <div style="border-top:1px solid var(--border-default);margin:var(--space-2) 0"></div>
+
+          <!-- Direction (only show if data available) -->
+          <div id="direction-panel" style="display:none">
+            <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim);margin-bottom:var(--space-2)">Direction</div>
+            <div class="surv-stat-item"><span class="surv-stat-label">Up</span><span id="s-dir-up">—</span></div>
+            <div class="surv-stat-item"><span class="surv-stat-label">Down</span><span id="s-dir-down">—</span></div>
+            <div class="surv-stat-item"><span class="surv-stat-label">Unknown</span><span id="s-dir-unk">—</span></div>
+          </div>
+
+          <div class="card" style="margin-top:var(--space-3)">
+            <div class="font-semibold" style="margin-bottom:10px">Intelligent Safety Signals</div>
+            <div id="result-intelligence" class="feature-stat-grid"></div>
+            <div id="result-incidents" style="margin-top:12px"></div>
+          </div>
+
+          <!-- Download report -->
+          <button id="dl-report-btn" class="btn btn-secondary w-full" style="margin-top:var(--space-2)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download JSON Report
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="/js/auth.js"></script>
+<script src="/js/api-client.js"></script>
+<script src="/js/shell.js"></script>
+<script>
+if (!Auth.requireAuth()) throw new Error('Not authenticated');
+document.addEventListener('DOMContentLoaded', () => {
+  renderShell('Surveillance');
+  initSurveillance();
+  loadAccuracyProfile();
+});
+
+let currentFile = null;
+let currentSessionId = null;
+let currentReport = null;
+let progressSource = null;
+
+function initSurveillance() {
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('video-input');
+  const browseLink = document.getElementById('browse-link');
+  const clearFile  = document.getElementById('clear-file');
+  const startBtn   = document.getElementById('start-analysis');
+  const newBtn     = document.getElementById('new-analysis-btn');
+  const cancelBtn  = document.getElementById('cancel-btn');
+  const dlBtn      = document.getElementById('dl-report-btn');
+
+  browseLink.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('keydown', e => { if (e.key === 'Enter') fileInput.click(); });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0]);
+  });
+
+  // Drag and drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f) setFile(f);
+  });
+
+  clearFile.addEventListener('click', clearSelection);
+  startBtn.addEventListener('click', startAnalysis);
+  cancelBtn.addEventListener('click', cancelAnalysis);
+  const retryBtn = document.getElementById('proc-retry-btn');
+  if (retryBtn) retryBtn.addEventListener('click', resetToUpload);
+  newBtn.addEventListener('click', resetToUpload);
+  dlBtn.addEventListener('click', downloadReport);
+
+  // Check for session or camera in URL or active processing job
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session');
+  const cameraId = params.get('camera');
+  if (cameraId) {
+    loadLiveCamera(cameraId);
+  } else if (sessionId) {
+    loadExistingSession(sessionId);
+  } else {
+    checkActiveJob();
+  }
+}
+
+function loadAccuracyProfile() {
+  const s = Auth.getSettings() || {};
+  const map = {
+    'expected-direction':'expected_direction', 'speed-limit':'speed_limit_kmh', 'meters-per-pixel':'meters_per_pixel',
+    'lane-count':'lane_count', 'stopped-seconds':'stopped_seconds', 'analysis-confidence':'confidence', 'analysis-image-size':'image_size',
+    'analysis-frame-stride':'frame_stride', 'speed-margin':'speed_margin_kmh', 'confirmation-frames':'confirmation_frames',
+    'lane-top-width':'lane_top_width_ratio', 'lane-bottom-width':'lane_bottom_width_ratio', 'speed-reference-distance':'speed_reference_distance_m',
+    'speed-gate-top':'speed_gate_top', 'speed-gate-bottom':'speed_gate_bottom'
+  };
+  Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id); if(el && s[key]!==undefined && s[key]!==null && s[key]!=='' ) el.value=String(s[key]);});
+  const directionEl = document.getElementById('expected-direction');
+  if (directionEl && (!s.detection_profile_version || Number(s.detection_profile_version) < 2)) directionEl.value = 'AUTO';
+}
+
+async function checkActiveJob() {
+  try {
+    const res = await ApiClient.getActiveJob();
+    if (res && res.job && res.job.sessionId) {
+      currentSessionId = res.job.sessionId;
+      showProcessing(res.job.filename || 'Processing...');
+      document.getElementById('session-badge').textContent = res.job.sessionId;
+      appendTerminalLine(`Reconnected to active session: ${res.job.sessionId}`);
+      startProgressStream(res.job.sessionId);
+    }
+  } catch {}
+}
+
+function setFile(f) {
+  const allowed = ['video/mp4','video/avi','video/quicktime','video/x-matroska','video/webm','video/x-msvideo','video/x-m4v'];
+  // Also allow by extension if MIME is generic
+  const ext = f.name.split('.').pop().toLowerCase();
+  const allowedExt = ['mp4','avi','mov','mkv','webm','m4v'];
+  if (!allowed.includes(f.type) && !allowedExt.includes(ext)) {
+    Toast.error('Invalid file type', 'Please select a video file (MP4, AVI, MOV, MKV, WebM)');
+    return;
+  }
+  currentFile = f;
+  document.getElementById('file-name').textContent = f.name;
+  document.getElementById('file-size').textContent = formatBytes(f.size);
+  document.getElementById('file-preview').style.display = 'block';
+}
+
+function clearSelection() {
+  currentFile = null;
+  document.getElementById('file-preview').style.display = 'none';
+  document.getElementById('video-input').value = '';
+}
+
+async function startAnalysis() {
+  if (!currentFile) { Toast.warning('No file selected', 'Please select a video file first.'); return; }
+
+  // Check if already processing
+  try {
+    const activeRes = await ApiClient.getActiveJob();
+    if (activeRes && activeRes.job) {
+      Toast.warning('Already Processing', 'An analysis is already running. Reconnecting to active job...');
+      currentSessionId = activeRes.job.sessionId;
+      showProcessing(activeRes.job.filename || 'Processing...');
+      document.getElementById('session-badge').textContent = activeRes.job.sessionId;
+      pollJobProgress(activeRes.job.sessionId);
+      return;
+    }
+  } catch {}
+
+  showProcessing(currentFile.name);
+  appendTerminalLine('[Client] Uploading video to cloud server...');
+
+  try {
+    const res = await ApiClient.analyze(currentFile, {
+        expected_direction: document.getElementById('expected-direction')?.value || 'AUTO',
+        speed_limit_kmh: document.getElementById('speed-limit')?.value || 40,
+        meters_per_pixel: document.getElementById('meters-per-pixel')?.value || 0.05,
+        lane_count: document.getElementById('lane-count')?.value || 3,
+        stopped_seconds: document.getElementById('stopped-seconds')?.value || 5,
+        confidence: document.getElementById('analysis-confidence')?.value || 0.30,
+        image_size: document.getElementById('analysis-image-size')?.value || 640,
+        frame_stride: document.getElementById('analysis-frame-stride')?.value || 1,
+        speed_margin_kmh: document.getElementById('speed-margin')?.value || 0,
+        confirmation_frames: document.getElementById('confirmation-frames')?.value || 3,
+        lane_top_width_ratio: document.getElementById('lane-top-width')?.value || 0.60,
+        lane_bottom_width_ratio: document.getElementById('lane-bottom-width')?.value || 1.0,
+        speed_reference_distance_m: document.getElementById('speed-reference-distance')?.value || 0,
+        speed_gate_top: document.getElementById('speed-gate-top')?.value || 0.35,
+        speed_gate_bottom: document.getElementById('speed-gate-bottom')?.value || 0.70,
+      });
+    currentSessionId = res.sessionId || res.session_id;
+    document.getElementById('session-badge').textContent = currentSessionId;
+    appendTerminalLine(`[Server] Job created: ${res.jobId || currentSessionId}`);
+    appendTerminalLine(`[AI Engine] Initializing UVH-26 YOLOv11-S vehicle detection...`);
+    pollJobProgress(currentSessionId);
+  } catch (err) {
+    if (err.message && err.message.includes('already in progress')) {
+      Toast.warning('Already Processing', err.message);
+      resetToUpload();
+    } else {
+      showError(err.message || 'Upload failed');
+    }
+  }
+}
+
+let _pollTimer = null;
+
+function pollJobProgress(sessionId) {
+  if (_pollTimer) clearInterval(_pollTimer);
+
+  let attempts = 0;
+  const maxAttempts = 180; // 6 minutes max
+
+  _pollTimer = setInterval(async () => {
+    attempts++;
+    if (attempts > maxAttempts) {
+      clearInterval(_pollTimer);
+      showError('Analysis timed out. Please check your network connection.');
+      return;
+    }
+
+    try {
+      // Check active job
+      const activeRes = await ApiClient.getActiveJob();
+      if (activeRes && activeRes.job && (activeRes.job.sessionId === sessionId || activeRes.job.analysisId === sessionId)) {
+        const job = activeRes.job;
+        const prog = job.progress || 25;
+        const stage = job.stage || 'Detecting & tracking vehicles...';
+        updateProcProgress(prog, stage);
+        return;
+      }
+
+      // If active job is gone, check if result is ready
+      const res = await ApiClient.getResult(sessionId);
+      if (res && res.status === 'completed' && res.report) {
+        clearInterval(_pollTimer);
+        updateProcProgress(100, 'Analysis complete!');
+        currentReport = res.report;
+        showResults(sessionId, res.report, res.videoAvailable !== false);
+        Toast.success('Analysis complete', 'Vehicle detection finished successfully.');
+      } else if (res && res.status === 'failed') {
+        clearInterval(_pollTimer);
+        showError('Analysis failed on server. Please ensure the video is valid.');
+      }
+    } catch (err) {
+      // Ignore transient fetch errors while function is working
+    }
+  }, 2000);
+}
+
+function updateProcProgress(pct, stage) {
+  const bar = document.getElementById('proc-progress');
+  if (bar) bar.style.width = `${pct}%`;
+  updateProcTitle(stage);
+  appendTerminalLine(`[AI Pipeline] ${stage} (${pct}%)`);
+}
+
+async function fetchResult(sessionId) {
+  try {
+    const res = await ApiClient.getResult(sessionId);
+    if (res.status === 'completed' && res.report) {
+      currentReport = res.report;
+      showResults(sessionId, res.report);
+      Toast.success('Analysis complete', 'Vehicle detection finished successfully.');
+    } else if (res.status === 'failed') {
+      showError('Analysis failed. Check the terminal output.');
+    } else {
+      // Still processing — try again
+      setTimeout(() => fetchResult(sessionId), 3000);
+    }
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+function showResults(sessionId, report, videoAvailable = true) {
+  document.getElementById('upload-section').style.display = 'none';
+  document.getElementById('processing-section').style.display = 'none';
+  document.getElementById('results-section').style.display = 'block';
+
+  // Video availability check
+  const vidWrap = document.querySelector('.video-player-wrap');
+  const vid = document.getElementById('result-video');
+
+  // Remove any previous unavailable notice
+  const existing = vidWrap.querySelector('.video-unavailable-notice');
+  if (existing) existing.remove();
+
+  if (videoAvailable !== false) {
+    vid.style.display = 'block';
+    document.getElementById('video-label').style.display = 'flex';
+    vid.src = ApiClient.videoUrl(sessionId);
+  } else {
+    // Video has been rotated out — show notice instead of broken player
+    vid.style.display = 'none';
+    document.getElementById('video-label').style.display = 'none';
+    const notice = document.createElement('div');
+    notice.className = 'video-unavailable-notice';
+    notice.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0">
+        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+        <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+        <line x1="1" y1="1" x2="23" y2="23"/>
+      </svg>
+      <span>Original video no longer stored. The system keeps only the most recent physical video. Report data is fully preserved.</span>
+    `;
+    vidWrap.appendChild(notice);
+  }
+
+  // Stats from REAL detector output
+  const v = report.vehicle_counts || report.vehicles || {};
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val != null ? val : '—';
+  };
+
+  const total  = report.total_vehicles ?? report.total_unique ?? '—';
+  const active = report.active_now ?? '—';
+  const car    = v.car ?? report.cars ?? '—';
+  const moto   = v.motorcycle ?? report.motorcycles ?? '—';
+  const auto   = v.auto ?? v.auto_rickshaw ?? report.auto_rickshaws ?? '—';
+  const bus    = v.bus ?? report.buses ?? '—';
+  const truck  = v.truck ?? report.trucks ?? '—';
+
+  set('s-total', total); set('bar-total', total);
+  set('s-active', active); set('bar-active', active);
+  set('s-car', car); set('bar-car', car);
+  set('s-moto', moto); set('bar-moto', moto);
+  set('s-auto', auto); set('bar-auto', auto);
+  set('s-bus', bus);
+  set('s-truck', truck);
+  // Bus + Truck combined in bottom bar
+  const bt = ((typeof bus==='number'?bus:0) + (typeof truck==='number'?truck:0)) || '—';
+  set('bar-bt', bt);
+
+  // Traffic density
+  const density = report.traffic_density?.level || report.traffic?.density || 'N/A';
+  const densityEl = document.getElementById('s-density');
+  if (densityEl) {
+    densityEl.textContent = density;
+    const cls = { LOW:'badge-success', MEDIUM:'badge-warning', HIGH:'badge-error', SEVERE:'badge-error' };
+    densityEl.className = 'badge ' + (cls[density] || 'badge-muted');
+  }
+
+  // Speed — only show km/h if available, otherwise N/A
+  const kmh = report.speed?.average_kmh;
+  const pxs = report.speed?.average_pixels_per_second;
+  set('s-speed', kmh != null ? kmh.toFixed(1) + ' km/h' : (pxs ? pxs.toFixed(0) + ' px/s' : 'N/A'));
+
+  // Duration and processing time
+  set('s-duration', formatDuration(report.video_duration));
+  set('s-proctime', formatDuration(report.processing_time_seconds));
+
+  // Direction (only if we have up or down data)
+  const dc = report.direction_counts || {};
+  const up = dc.UP ?? report.direction?.up ?? 0;
+  const down = dc.DOWN ?? report.direction?.down ?? 0;
+  const unk = dc.UNKNOWN ?? 0;
+  if (up > 0 || down > 0) {
+    document.getElementById('direction-panel').style.display = 'block';
+    set('s-dir-up', up);
+    set('s-dir-down', down);
+    set('s-dir-unk', unk);
+  }
+
+  // File label
+  const fname = currentFile?.name || report.video?.split(/[\\/]/).pop() || '—';
+  document.getElementById('result-file-label').textContent = fname;
+  renderIntelligenceSummary(report);
+}
+
+function downloadReport() {
+  if (!currentReport) { Toast.warning('No report', 'Run an analysis first.'); return; }
+  const blob = new Blob([JSON.stringify(currentReport, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `survillence_report_${currentSessionId || Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showProcessing(filename) {
+  document.getElementById('upload-section').style.display = 'none';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('processing-section').style.display = 'block';
+  document.getElementById('proc-file').textContent = filename;
+  document.getElementById('terminal').innerHTML = '';
+  document.getElementById('proc-title').textContent = 'Processing video...';
+  document.getElementById('proc-title').style.color = '';
+  const spinner = document.getElementById('proc-spinner');
+  if (spinner) spinner.style.display = 'block';
+  const actions = document.getElementById('proc-actions-wrap');
+  if (actions) actions.style.display = 'none';
+}
+
+function updateProcTitle(msg) {
+  document.getElementById('proc-title').textContent = msg;
+}
+
+function appendTerminalLine(msg) {
+  const term = document.getElementById('terminal');
+  if (!term) return;
+  const line = document.createElement('div');
+  line.className = 'line' + (msg.includes('Error') || msg.includes('failed') || msg.includes('[ERROR]') ? ' line-error' : '') + (msg.includes('completed') || msg.includes('[Complete]') ? ' line-done' : '');
+  line.textContent = msg;
+  term.appendChild(line);
+  term.scrollTop = term.scrollHeight;
+}
+
+function showError(msg) {
+  document.getElementById('upload-section').style.display = 'none';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('processing-section').style.display = 'block';
+
+  appendTerminalLine('[ERROR] ' + msg);
+  document.getElementById('proc-title').textContent = 'Analysis failed';
+  document.getElementById('proc-title').style.color = 'var(--error)';
+  const spinner = document.getElementById('proc-spinner');
+  if (spinner) spinner.style.display = 'none';
+  const actions = document.getElementById('proc-actions-wrap');
+  if (actions) actions.style.display = 'flex';
+  Toast.error('Analysis failed', msg);
+}
+
+
+async function cancelAnalysis() {
+  if (!currentSessionId) {
+    resetToUpload();
+    Toast.info('Cancelled', 'Analysis cancelled.');
+    return;
+  }
+  const session = currentSessionId;
+  try {
+    const active = await ApiClient.getActiveJob();
+    if (active?.job?.sessionId === session && active.job.jobId) {
+      await ApiClient.cancelJob(active.job.jobId);
+    }
+    if (progressSource) progressSource.close();
+    if (_pollTimer) clearInterval(_pollTimer);
+    resetToUpload();
+    Toast.info('Cancelled', 'Analysis cancellation requested.');
+  } catch (err) {
+    Toast.error('Cancel failed', err.message || 'Could not cancel the analysis.');
+  }
+}
+
+let liveCamPollTimer = null;
+let currentCamera = null;
+
+async function loadLiveCamera(cameraId) {
+  try {
+    const cam = await ApiClient.getCamera(cameraId);
+    currentCamera = cam;
+    document.getElementById('upload-section').style.display = 'none';
+    document.getElementById('processing-section').style.display = 'none';
+    document.getElementById('results-section').style.display = 'block';
+
+    // Set header labels
+    document.getElementById('session-badge').textContent = `CAM: ${cam.name}`;
+    const statusBadge = document.getElementById('result-status-badge');
+    statusBadge.className = 'badge badge-success';
+    statusBadge.innerHTML = `<span class="dot" style="background:var(--success)"></span> LIVE CCTV: ${cam.name}`;
+
+    document.getElementById('result-file-label').textContent = `${cam.type} · ${cam.streamUrl}`;
+    document.getElementById('result-date-label').textContent = 'Live Feed (Real-Time)';
+
+    // Adjust "New Analysis" button to allow switching back to recorded upload
+    const newBtn = document.getElementById('new-analysis-btn');
+    newBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/></svg>
+      Switch to Upload
+    `;
+
+    // Replace video player with live stream image
+    const vidWrap = document.querySelector('.video-player-wrap');
+    const vid = document.getElementById('result-video');
+    vid.style.display = 'none';
+    vid.pause();
+
+    // Clear any previous live img or notices
+    const oldImg = vidWrap.querySelector('#camera-live-stream-img');
+    if (oldImg) oldImg.remove();
+    const existingNotice = vidWrap.querySelector('.video-unavailable-notice');
+    if (existingNotice) existingNotice.remove();
+
+    const videoLabel = document.getElementById('video-label');
+    videoLabel.style.display = 'flex';
+    videoLabel.innerHTML = '<span class="dot"></span> LIVE CCTV';
+
+    const streamImg = document.createElement('img');
+    streamImg.id = 'camera-live-stream-img';
+    streamImg.alt = `${cam.name} Live Stream`;
+    streamImg.style.maxWidth = '100%';
+    streamImg.style.maxHeight = '340px';
+    streamImg.style.width = 'auto';
+    streamImg.style.height = 'auto';
+    streamImg.style.display = 'block';
+    streamImg.style.objectFit = 'contain';
+    streamImg.style.borderRadius = 'var(--radius-md)';
+    streamImg.src = ApiClient.cameraStreamUrl(cameraId);
+
+    streamImg.onerror = () => {
+      statusBadge.className = 'badge badge-error';
+      statusBadge.innerHTML = `<span class="dot" style="background:var(--error)"></span> NO SIGNAL`;
+      videoLabel.innerHTML = '<span class="dot" style="background:var(--error)"></span> OFFLINE';
+    };
+
+    vidWrap.appendChild(streamImg);
+
+    // Initial stats poll & periodic refresh
+    pollCameraStats(cameraId);
+    if (liveCamPollTimer) clearInterval(liveCamPollTimer);
+    liveCamPollTimer = setInterval(() => pollCameraStats(cameraId), 1500);
+
+  } catch (err) {
+    Toast.error('Camera Error', err.message);
+    resetToUpload();
+  }
+}
+
+async function pollCameraStats(cameraId) {
+  try {
+    const stats = await ApiClient.getCameraStats(cameraId);
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val != null ? val : '—';
+    };
+    const s = stats.stats || stats || {};
+    set('s-total', s.total_unique ?? s.active_vehicles ?? 0); set('bar-total', s.total_unique ?? s.active_vehicles ?? 0);
+    set('s-active', s.active_now ?? s.active_vehicles ?? 0); set('bar-active', s.active_now ?? s.active_vehicles ?? 0);
+    set('s-car', s.cars ?? 0); set('bar-car', s.cars ?? 0);
+    set('s-moto', s.motorcycles ?? 0); set('bar-moto', s.motorcycles ?? 0);
+    set('s-auto', s.autos ?? 0); set('bar-auto', s.autos ?? 0);
+    set('s-bus', s.buses ?? 0);
+    set('s-truck', s.trucks ?? 0);
+    set('bar-bt', (s.buses || 0) + (s.trucks || 0));
+  } catch {}
+}
+
+function renderIntelligenceSummary(report) {
+  const ws = report.wrong_way || {};
+  const sv = report.speed_violations || {};
+  const inc = report.incident_summary || {};
+  const lane = report.lane_analysis || {};
+  const host = document.getElementById('result-intelligence');
+  const incidentsHost = document.getElementById('result-incidents');
+  if (host) host.innerHTML = [
+    ['Wrong Way', ws.count ?? 0],
+    ['Speed Violations', sv.count ?? 0],
+    ['Incidents', inc.total ?? 0],
+    ['Lanes', lane.lane_count ?? 3],
+    ['Avg Speed', report.speed?.average_kmh ? report.speed.average_kmh + ' km/h' : 'N/A'],
+  ].map(([a,b])=>`<div class="feature-chip"><span>${a}</span><strong>${b}</strong></div>`).join('');
+  if (incidentsHost) {
+    const list = (report.incidents || []).slice(0, 8);
+    incidentsHost.innerHTML = list.length ? list.map(i=>`<div class="incident-row"><span class="incident-dot ${i.severity==='MEDIUM'?'medium':''}"></span><div><strong style="font-size:12px">${i.type}</strong><div class="text-xs text-muted" style="margin-top:2px">${i.message}</div></div></div>`).join('') : '<div class="text-xs text-muted">No intelligent incidents detected in this session.</div>';
+  }
+}
+
+function resetToUpload() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+  if (liveCamPollTimer) {
+    clearInterval(liveCamPollTimer);
+    liveCamPollTimer = null;
+  }
+  const streamImg = document.getElementById('camera-live-stream-img');
+  if (streamImg) streamImg.remove();
+  const vid = document.getElementById('result-video');
+  if (vid) {
+    vid.style.display = 'block';
+    vid.pause();
+    vid.src = '';
+  }
+  const videoLabel = document.getElementById('video-label');
+  if (videoLabel) {
+    videoLabel.innerHTML = '<span class="dot"></span> PROCESSED VIDEO';
+  }
+  const newBtn = document.getElementById('new-analysis-btn');
+  if (newBtn) {
+    newBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Analysis
+    `;
+  }
+  if (window.history.replaceState && new URLSearchParams(window.location.search).has('camera')) {
+    window.history.replaceState({}, '', '/surveillance');
+  }
+  currentFile = null;
+  currentSessionId = null;
+  currentReport = null;
+  currentCamera = null;
+  if (progressSource) progressSource.close();
+  document.getElementById('upload-section').style.display = 'block';
+  document.getElementById('processing-section').style.display = 'none';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('file-preview').style.display = 'none';
+  document.getElementById('video-input').value = '';
+  document.getElementById('session-badge').textContent = '';
+}
+
+async function loadExistingSession(sessionId) {
+  currentSessionId = sessionId;
+  document.getElementById('session-badge').textContent = sessionId;
+  try {
+    const res = await ApiClient.getResult(sessionId);
+    if (res.status === 'completed' && res.report) {
+      currentReport = res.report;
+      // Pass videoAvailable so the player shows proper state
+      const videoAvail = res.videoAvailable !== false;
+      showResults(sessionId, res.report, videoAvail);
+      document.getElementById('result-status-badge').textContent = 'Previous Analysis';
+      if (!videoAvail) {
+        document.getElementById('result-status-badge').className = 'badge badge-warning';
+        document.getElementById('result-status-badge').textContent = 'History — Video Replaced';
+      }
+    } else if (res.status === 'processing') {
+      showProcessing('Resuming session...');
+      startProgressStream(sessionId);
+    } else {
+      Toast.warning('Session not found', 'Could not load session: ' + sessionId);
+    }
+  } catch (err) {
+    Toast.error('Load failed', err.message);
+  }
+}
+</script>
+  <script src="/js/visual-enhancements.js"></script>
+</body>
+</html>
