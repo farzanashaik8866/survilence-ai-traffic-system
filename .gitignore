@@ -52,8 +52,6 @@ storage/traffic_reports/
 traffic_ai_complete_improved/vehicle_traffic.pt
 # AI model files
 traffic_ai_complete_improved/*.pt
-traffic_ai_complete_improved/*.onnx
-
 # Generated traffic analysis files
 storage/traffic_uploads/*
 !storage/traffic_uploads/.gitkeep
