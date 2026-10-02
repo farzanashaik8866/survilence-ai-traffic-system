@@ -419,7 +419,7 @@ function pollJobProgress(sessionId) {
   if (_pollTimer) clearInterval(_pollTimer);
 
   let attempts = 0;
-  const maxAttempts = 380; // 6 minutes max
+  const maxAttempts = 180; // 6 minutes max
 
   _pollTimer = setInterval(async () => {
     attempts++;
